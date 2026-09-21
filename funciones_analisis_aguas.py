@@ -145,3 +145,141 @@ plt.savefig(
     'dashboard_exploratorio_aqualimpia.png', dpi=300, bbox_inches='tight'
 )
 plt.show()
+
+"""Módulo de Funciones Reutilizables - AquaLimpia S.A.
+
+Asignatura: Ciencia de Datos - Semana 8 Autor: Felipe Muñoz Lillo Descripción:
+Contiene funciones modulares externas para carga de datos, inferencia
+estadística avanzada con NumPy y SciPy, exportación de reportes diferenciados y
+persistencia con Joblib.
+"""
+
+from joblib import dump, load
+import numpy as np
+import pandas as pd
+from scipy import stats
+
+
+def cargar_datos(ruta_archivo: str) -> pd.DataFrame:
+  """Carga el dataset tabular desde formato Excel o CSV asegurando inmutabilidad."""
+  if ruta_archivo.endswith((".xlsx", ".xls")):
+    return pd.read_excel(ruta_archivo)
+  elif ruta_archivo.endswith(".csv"):
+    return pd.read_csv(ruta_archivo)
+  else:
+    raise ValueError("Formato de archivo no soportado. Debe ser .xlsx o .csv")
+
+
+def calcular_estadisticas_planta(df: pd.DataFrame) -> pd.DataFrame:
+  """Calcula agregaciones operacionales e intervalos de confianza (95%)
+
+  por planta utilizando NumPy y SciPy.
+  """
+  resumen = []
+  for planta, grp in df.groupby("planta"):
+    # Extracción de valores a arreglos vectorizados de NumPy
+    dbo_salida = grp["DBO_salida_mg_L"].values
+    n = len(dbo_salida)
+
+    # Inferencia estadística con SciPy y NumPy
+    media_dbo_salida = np.mean(dbo_salida)
+    error_estandar = stats.sem(dbo_salida)
+    # Intervalo de confianza t-Student al 95% de dos colas
+    ic_95 = stats.t.interval(
+        0.95, df=n - 1, loc=media_dbo_salida, scale=error_estandar
+    )
+
+    # Métricas operacionales complementarias
+    caudal_medio = np.mean(grp["caudal_entrada_m3_d"])
+    dbo_entrada_media = np.mean(grp["DBO_entrada_mg_L"])
+    sst_entrada_media = np.mean(grp["SST_entrada_mg_L"])
+    energia_media = np.mean(grp["energia_aeracion_kWh"])
+    lodos_medio = np.mean(grp["lodos_generados_kg_d"])
+    tasa_cumplimiento = np.mean(grp["cumplimiento_norma"]) * 100
+
+    # Eficiencia media de remoción de DBO porcentual
+    eficiencia = (
+        (grp["DBO_entrada_mg_L"] - grp["DBO_salida_mg_L"])
+        / grp["DBO_entrada_mg_L"]
+    ) * 100
+    eficiencia_media = np.mean(eficiencia)
+
+    resumen.append({
+        "planta": planta,
+        "registros_n": n,
+        "caudal_medio_m3_d": round(caudal_medio, 2),
+        "DBO_entrada_media_mg_L": round(dbo_entrada_media, 2),
+        "SST_entrada_media_mg_L": round(sst_entrada_media, 2),
+        "DBO_salida_media_mg_L": round(media_dbo_salida, 2),
+        "IC95_inf_DBO_salida": round(ic_95[0], 2),
+        "IC95_sup_DBO_salida": round(ic_95[1], 2),
+        "eficiencia_remocion_DBO_pct": round(eficiencia_media, 2),
+        "energia_aeracion_media_kWh": round(energia_media, 2),
+        "lodos_generados_medio_kg_d": round(lodos_medio, 2),
+        "tasa_cumplimiento_pct": round(tasa_cumplimiento, 2),
+    })
+
+  return pd.DataFrame(resumen)
+
+
+def exportar_reportes_diferenciados(
+    df: pd.DataFrame, ruta_operaciones: str, ruta_ambiental: str
+) -> None:
+  """Genera y exporta reportes desacoplados en Excel para Operaciones y Gestión Ambiental."""
+  # 1. Reporte Operacional
+  cols_operaciones = [
+      "fecha_registro",
+      "planta",
+      "caudal_entrada_m3_d",
+      "DBO_entrada_mg_L",
+      "DBO_salida_mg_L",
+      "energia_aeracion_kWh",
+      "lodos_generados_kg_d",
+  ]
+  df[cols_operaciones].to_excel(ruta_operaciones, index=False)
+
+  # 2. Reporte Ambiental
+  cols_ambiental = [
+      "fecha_registro",
+      "planta",
+      "DBO_salida_mg_L",
+      "cumplimiento_norma",
+  ]
+  df[cols_ambiental].to_excel(ruta_ambiental, index=False)
+
+
+def persistir_metricas_joblib(metricas_dict: dict, ruta_salida: str) -> None:
+  """Persiste en disco un diccionario con las métricas analíticas utilizando Joblib."""
+  dump(metricas_dict, ruta_salida)
+
+
+def cargar_metricas_joblib(ruta_archivo: str) -> dict:
+  """Carga desde disco artefactos serializados previamente con Joblib."""
+  return load(ruta_archivo)
+
+# 1. Cargar los datos usando la función definida arriba
+df_aguas = cargar_datos('dataset_set_A_aguas_residuales.xlsx')
+print(
+    f'Datos cargados: {df_aguas.shape[0]} filas x {df_aguas.shape[1]} columnas'
+)
+
+# 2. Ejecutar los cálculos estadísticos (NumPy y SciPy)
+resumen = calcular_estadisticas_planta(df_aguas)
+
+# 3. Exportar los dos archivos Excel solicitados
+exportar_reportes_diferenciados(
+    df_aguas,
+    'reporte_area_operaciones.xlsx',
+    'reporte_area_gestion_ambiental.xlsx',
+)
+
+# 4. Guardar métricas con Joblib
+metricas_dict = {
+    'total_registros': len(df_aguas),
+    'resumen': resumen.to_dict(orient='records'),
+}
+persistir_metricas_joblib(metricas_dict, 'metricas_resumen_aguas.joblib')
+
+# 5. Mostrar la tabla de resultados en pantalla
+print('\n--- RESUMEN ESTADÍSTICO POR PLANTA ---')
+resumen
