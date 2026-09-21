@@ -1,7 +1,7 @@
 # Auditoría Analítica de Desempeño Operacional y Calidad de Efluentes — AquaLimpia S.A.
 
 ## 1. Definición del Problema
-La empresa AquaLimpia S.A. opera tres plantas de tratamiento de aguas residuales (Planta Centro, Planta Norte y Planta Sur), encargadas de depurar efluentes domésticos e industriales antes de su vertido a cuerpos receptores. Durante el último trimestre, se han registrado superaciones intermitentes en la Demanda Biológica de Oxígeno del efluente tratado ($\text{DBO}_{\text{salida}}$), poniendo en riesgo el cumplimiento del estándar legal establecido (límite máximo permitido de 30 mg/L) y generando vulnerabilidad regulatoria ante sanciones ambientales.
+La empresa AquaLimpia S.A. opera tres plantas de tratamiento de aguas residuales (Planta Centro, Planta Norte y Planta Sur), encargadas de depurar efluentes domésticos e industriales antes de su vertido a cuerpos receptores. Durante el último trimestre, se han registrado superaciones intermitentes en la Demanda Biológica de Oxígeno del efluente tratado (DBO}_salida), poniendo en riesgo el cumplimiento del estándar legal establecido (límite máximo permitido de 30 mg/L) y generando vulnerabilidad regulatoria ante sanciones ambientales.
 
 ## 2. Objetivos del Proyecto
 
